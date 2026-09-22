@@ -2,105 +2,145 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowDown, Phone, Network, Activity, CheckCircle2, ShieldAlert, FileKey, Lock, ShieldCheck, ArrowLeft } from "lucide-react";
+import { Activity, ArrowLeft, CheckCircle2, ChevronRight, FileKey, Lock, Network, Phone, ShieldAlert, ShieldCheck } from "lucide-react";
 import { explanations } from "@/config/explanations";
 import { TechnicalExplanation } from "@/components/TechnicalExplanation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const architectureNodes = [
-  { id: "call", icon: <Phone className="w-5 h-5" />, data: explanations.call },
-  { id: "processing", icon: <Network className="w-5 h-5" />, data: explanations.processing },
-  { id: "detection", icon: <Activity className="w-5 h-5" />, data: explanations.detection },
-  { id: "verification", icon: <CheckCircle2 className="w-5 h-5" />, data: explanations.verification },
-  { id: "risk", icon: <ShieldAlert className="w-5 h-5" />, data: explanations.risk },
-  { id: "receipt", icon: <FileKey className="w-5 h-5" />, data: explanations.receipt },
-  { id: "payment", icon: <Lock className="w-5 h-5" />, data: explanations.payment },
-  { id: "privacy", icon: <ShieldCheck className="w-5 h-5" />, data: explanations.privacy },
+  { id: "call", icon: <Phone />, data: explanations.call },
+  { id: "processing", icon: <Network />, data: explanations.processing },
+  { id: "detection", icon: <Activity />, data: explanations.detection },
+  { id: "verification", icon: <CheckCircle2 />, data: explanations.verification },
+  { id: "risk", icon: <ShieldAlert />, data: explanations.risk },
+  { id: "receipt", icon: <FileKey />, data: explanations.receipt },
+  { id: "payment", icon: <Lock />, data: explanations.payment },
+  { id: "privacy", icon: <ShieldCheck />, data: explanations.privacy },
 ];
 
-export default function ArchitecturePage() {
-  const [activeNode, setActiveNode] = useState<string | null>(null);
+const phases = [
+  { number: "01", title: "Connect", description: "Securely access and prepare the live call", ids: ["call", "processing"] },
+  { number: "02", title: "Assess", description: "Analyse voice, identity and emerging risk", ids: ["detection", "verification", "risk"] },
+  { number: "03", title: "Protect", description: "Carry risk evidence into the intended action", ids: ["receipt", "payment"] },
+  { number: "04", title: "Govern", description: "Apply privacy and deployment safeguards", ids: ["privacy"] },
+];
 
-  const activeData = architectureNodes.find(n => n.id === activeNode)?.data;
+const statusStyles = {
+  IMPLEMENTED: "status-implemented",
+  SIMULATED: "status-simulated",
+  PROPOSED: "status-proposed",
+  "DEMO-ONLY": "status-demo",
+};
+
+export default function ArchitecturePage() {
+  const [activeNode, setActiveNode] = useState("call");
+  const activeIndex = architectureNodes.findIndex((node) => node.id === activeNode);
+  const activeItem = architectureNodes[activeIndex];
+  const activePhase = phases.find((phase) => phase.ids.includes(activeNode));
 
   return (
-    <div className="container mx-auto px-4 py-16 max-w-5xl space-y-16 min-h-[calc(100vh-4rem)]">
-      <div className="flex justify-between items-center max-w-2xl mx-auto mb-12">
-        <Link href="/simulation">
-          <Button variant="ghost" className="text-muted-foreground hover:text-foreground pl-0">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Experience
-          </Button>
-        </Link>
-      </div>
-      
-      <div className="text-center space-y-4 max-w-2xl mx-auto">
-        <h1 className="text-4xl font-semibold tracking-tight text-foreground">System Architecture</h1>
-        <p className="text-muted-foreground font-light leading-relaxed text-lg">
-          Explore the engineering behind the Vaani Kavach experience.
-        </p>
-      </div>
+    <div className="page-shell architecture-page container mx-auto px-5 max-w-6xl min-h-[calc(100vh-4rem)]">
+      <Link href="/simulation" className="inline-flex mb-10">
+        <Button variant="ghost" className="text-muted-foreground hover:text-foreground pl-0">
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Citizen Experience
+        </Button>
+      </Link>
 
-      <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-start">
-        {/* Diagram Column */}
-        <div className="flex flex-col items-center">
-          {architectureNodes.map((node, idx) => (
-            <div key={node.id} className="flex flex-col items-center w-full max-w-sm">
-              <motion.button 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setActiveNode(node.id)}
-                className={`w-full p-4 rounded-xl border text-left transition-all ${
-                  activeNode === node.id 
-                    ? "bg-white/10 border-white/20 text-foreground shadow-lg" 
-                    : "bg-white/[0.02] border-white/10 hover:border-white/20 text-foreground/80 cursor-pointer"
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`p-2 rounded-lg ${activeNode === node.id ? "bg-white/10" : "bg-white/5"}`}>
-                    {node.icon}
-                  </div>
-                  <span className="font-medium text-sm">{node.data.title}</span>
-                </div>
-              </motion.button>
-              
-              {idx < architectureNodes.length - 1 && (
-                <div className="py-2 text-muted-foreground/30">
-                  <ArrowDown className="w-4 h-4" />
-                </div>
-              )}
+      <header className="architecture-header">
+        <div>
+          <div className="eyebrow architecture-eyebrow">System Overview</div>
+          <h1 className="page-heading text-4xl sm:text-5xl font-semibold text-foreground">Technology Architecture</h1>
+          <p className="text-muted-foreground leading-relaxed text-lg">Review the secure technology workflow behind Vaani Kavach.</p>
+        </div>
+        <div className="architecture-summary" aria-label="Architecture summary">
+          <strong>4</strong><span>Operational phases</span><i />
+          <strong>8</strong><span>Technical modules</span>
+        </div>
+      </header>
+
+      <div className="architecture-workspace">
+        <section className="architecture-flow" aria-label="Vaani Kavach architecture workflow">
+          <div className="architecture-flow-intro">
+            <span>End-to-end workflow</span>
+            <small>Select any module to inspect it</small>
+          </div>
+
+          {phases.map((phase) => (
+            <div className="architecture-phase" key={phase.number}>
+              <div className="architecture-phase-heading">
+                <span>{phase.number}</span>
+                <div><h2>{phase.title}</h2><p>{phase.description}</p></div>
+              </div>
+
+              <div className="architecture-phase-modules">
+                {phase.ids.map((id) => {
+                  const node = architectureNodes.find((item) => item.id === id)!;
+                  const index = architectureNodes.findIndex((item) => item.id === id);
+                  return (
+                    <motion.button
+                      key={node.id}
+                      whileHover={{ x: 3 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => setActiveNode(node.id)}
+                      aria-pressed={activeNode === id}
+                      className="architecture-node"
+                    >
+                      <span className="architecture-step">{String(index + 1).padStart(2, "0")}</span>
+                      <span className="icon-tile architecture-node-icon">{node.icon}</span>
+                      <span className="architecture-node-copy">
+                        <strong>{node.data.title.replace(/^\d+\.\s*/, "")}</strong>
+                        <small className={statusStyles[node.data.label]}>{node.data.label}</small>
+                      </span>
+                      <ChevronRight className="architecture-chevron" aria-hidden="true" />
+                    </motion.button>
+                  );
+                })}
+              </div>
             </div>
           ))}
-        </div>
+        </section>
 
-        {/* Explanation Column */}
-        <div className="sticky top-24">
+        <aside className="architecture-inspector" aria-live="polite">
           <AnimatePresence mode="wait">
-            {activeData ? (
-              <motion.div
-                key={activeNode}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                className="space-y-6"
-              >
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-semibold tracking-tight text-foreground">Module Details</h3>
+            <motion.div
+              key={activeNode}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="architecture-details"
+            >
+              <div className="architecture-details-topline">
+                <span>Module {String(activeIndex + 1).padStart(2, "0")} of 08</span>
+                <span>{activePhase?.title} phase</span>
+              </div>
+              <div className="architecture-details-heading">
+                <div className="icon-tile">{activeItem.icon}</div>
+                <div>
+                  <span className={`architecture-status ${statusStyles[activeItem.data.label]}`}>{activeItem.data.label}</span>
+                  <h2>{activeItem.data.title.replace(/^\d+\.\s*/, "")}</h2>
                 </div>
-                <TechnicalExplanation data={activeData} />
-              </motion.div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="h-[200px] border border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center text-center p-8 bg-white/[0.01]"
-              >
-                <Network className="w-8 h-8 text-muted-foreground/30 mb-4" />
-                <p className="text-sm text-muted-foreground font-light">Select a highlighted module to view technical details.</p>
-              </motion.div>
-            )}
+              </div>
+              <p className="architecture-summary-copy">{activeItem.data.summary}</p>
+
+              <div className="architecture-position" aria-label={`Module ${activeIndex + 1} of 8`}>
+                {architectureNodes.map((node, index) => (
+                  <button
+                    key={node.id}
+                    type="button"
+                    onClick={() => setActiveNode(node.id)}
+                    aria-label={`Open module ${index + 1}: ${node.data.title.replace(/^\d+\.\s*/, "")}`}
+                    aria-current={node.id === activeNode ? "step" : undefined}
+                  />
+                ))}
+              </div>
+
+              <TechnicalExplanation data={activeItem.data} minimal />
+              <p className="architecture-help">Open the panel above for implementation notes and technical evidence.</p>
+            </motion.div>
           </AnimatePresence>
-        </div>
+        </aside>
       </div>
     </div>
   );

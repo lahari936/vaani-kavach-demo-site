@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Manrope, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
+import { MotionProvider } from "@/components/motion-provider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
 });
 
@@ -24,14 +25,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark h-full">
+    <html lang="en" className="h-full">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-full flex flex-col bg-background text-foreground`}
+        className={`${manrope.variable} ${geistMono.variable} font-sans antialiased min-h-full flex flex-col bg-background text-foreground`}
       >
-        <Navbar />
-        <main className="flex-1 pt-16">
-          {children}
-        </main>
+        <MotionProvider>
+          <Navbar />
+          <main className="flex-1">{children}</main>
+        </MotionProvider>
       </body>
     </html>
   );

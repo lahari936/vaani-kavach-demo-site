@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Phone, PhoneOff, PhoneCall, ShieldCheck, ShieldAlert, Fingerprint, Lock, Activity, Mic, MicOff, Grid3x3, Volume2, VolumeX, ArrowRight, Play, RefreshCw, FileKey, CheckCircle2 } from "lucide-react";
+import { Phone, PhoneOff, PhoneCall, ShieldCheck, ShieldAlert, Fingerprint, Lock, Activity, Mic, MicOff, Grid3x3, Volume2, VolumeX, ArrowRight, Play, RefreshCw, FileKey } from "lucide-react";
 import { scenarioConfig } from "@/config/scenario";
 import Link from "next/link";
+import { PhoneFrame } from "@/components/phone-frame";
 import { Badge } from "@/components/ui/badge";
 
 const STAGES = ["INCOMING", "ACTIVE CALL", "VERIFICATION", "PAYMENT", "PROTECTION"];
@@ -116,7 +117,7 @@ export default function SimulationPage() {
   // Voice Announcement 2: Security Alert
   useEffect(() => {
     if (currentStage === "ACTIVE CALL" && showAlert) {
-      speak("Security alert. Please verify this caller before transferring money.");
+      speak("Security alert. This unverified caller requested a twenty-five-thousand-rupee transfer. Verify the caller before taking action.");
     }
   }, [showAlert, currentStage, speak]);
 
@@ -148,7 +149,7 @@ export default function SimulationPage() {
   // Auto-scroll transcript
   useEffect(() => {
     if (transcriptEndRef.current) {
-      transcriptEndRef.current.scrollIntoView({ behavior: "smooth" });
+      transcriptEndRef.current.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
     }
   }, [currentTime]);
 
@@ -161,19 +162,19 @@ export default function SimulationPage() {
   };
 
   const renderProgress = () => (
-    <div className="w-full max-w-2xl mx-auto mb-10 pt-6">
-      <div className="flex justify-between items-center relative px-2">
-        <div className="absolute top-1/2 left-0 w-full h-[1px] bg-white/10 -z-10" />
+    <div className="simulation-progress w-full max-w-2xl mx-auto mb-10">
+      <div className="flex justify-between items-center relative isolate px-0 sm:px-2">
+        <div className="absolute top-1/2 left-0 w-full h-[1px] bg-secondary -z-10" />
         <motion.div 
-          className="absolute top-1/2 left-0 h-[1px] bg-foreground/50 -z-10 origin-left" 
+          className="absolute top-1/2 left-0 h-[1px] w-full bg-primary/50 -z-10 origin-left"
           initial={{ scaleX: 0 }}
           animate={{ scaleX: stageIndex / (STAGES.length - 1) }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
         />
         {STAGES.map((s, i) => (
-          <div key={s} className="flex flex-col items-center gap-2 bg-background px-2">
-            <div className={`w-1.5 h-1.5 rounded-full transition-colors ${stageIndex >= i ? "bg-foreground" : "bg-white/20"}`} />
-            <span className={`text-[9px] tracking-widest uppercase font-medium ${stageIndex >= i ? "text-foreground" : "text-muted-foreground/40"}`}>{s}</span>
+          <div key={s} className="flex flex-col items-center gap-2 bg-background px-1 sm:px-2">
+            <div className={`w-1.5 h-1.5 rounded-full transition-colors ${stageIndex >= i ? "bg-foreground" : "bg-primary/15"}`} />
+            <span className={`text-[8px] sm:text-[9px] tracking-wide sm:tracking-widest uppercase font-medium ${stageIndex >= i ? "text-foreground" : "text-muted-foreground"}`}>{s}</span>
           </div>
         ))}
       </div>
@@ -181,14 +182,16 @@ export default function SimulationPage() {
   );
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#050505] font-sans text-foreground pb-12 selection:bg-white/10 relative">
+    <div className="simulation-page flex flex-col min-h-screen font-sans text-foreground pb-12 selection:bg-secondary relative">
       
       {/* Voice Announcements Toggle */}
       <div className="absolute top-6 right-4 sm:right-8 z-10">
         <Button 
           variant="outline" 
           size="sm" 
-          className="border-white/10 bg-transparent hover:bg-white/[0.02] text-muted-foreground gap-2 h-8 text-xs"
+          className="border-border bg-transparent hover:bg-card text-muted-foreground gap-2 h-8 text-xs"
+          aria-label={announcementsMuted ? "Enable voice announcements" : "Mute voice announcements"}
+          aria-pressed={announcementsMuted}
           onClick={toggleMuteAnnouncements}
         >
           {announcementsMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
@@ -206,31 +209,31 @@ export default function SimulationPage() {
             {currentStage === "INCOMING" && (
               <motion.div key="incoming" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.05 }} className="w-full max-w-sm space-y-6">
                 <div className="text-center space-y-2 mb-4">
-                  <Badge variant="outline" className="border-red-500/20 text-red-500 bg-red-500/5 uppercase tracking-widest text-[10px]">Customer Perspective</Badge>
-                  <p className="text-muted-foreground text-sm font-light">You are receiving a call from someone claiming to be your bank.</p>
+                  <Badge variant="outline" className="border-red-500/20 text-red-700 bg-red-500/5 uppercase tracking-widest text-[10px]">Citizen Perspective</Badge>
+                  <p className="text-muted-foreground text-sm font-normal">A caller claiming to represent your bank&apos;s fraud desk is contacting you.</p>
                 </div>
 
-                <div className="aspect-[9/16] bg-[#0A0A0C] border border-white/5 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden relative">
+                <PhoneFrame className="phone-incoming">
                   <div className="flex-1 flex flex-col items-center justify-center space-y-6 pt-12">
-                    <div className="w-24 h-24 rounded-full bg-white/[0.02] border border-white/5 flex items-center justify-center">
-                      <Phone className="w-10 h-10 text-muted-foreground/30" />
+                    <div className="caller-avatar w-24 h-24 rounded-full bg-card border border-border flex items-center justify-center">
+                      <Phone className="w-10 h-10 text-muted-foreground" />
                     </div>
                     <div className="text-center space-y-1">
-                      <h2 className="text-2xl font-medium tracking-tight text-foreground/90">Bank Representative</h2>
+                      <h2 className="text-2xl font-medium tracking-tight text-foreground/90">HDFC Fraud Desk</h2>
                       <p className="text-sm text-muted-foreground">Incoming Call...</p>
-                      <p className="text-[11px] text-muted-foreground/40 font-mono mt-2">+91 98765 43210</p>
+                      <p className="text-[11px] text-muted-foreground font-mono mt-2">+91 98765 43210</p>
                     </div>
                   </div>
 
                   <div className="pb-16 px-12 flex justify-between items-center w-full">
-                    <button className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center border border-red-500/20 hover:bg-red-500/20 transition-colors">
+                    <button aria-label="Decline call" className="w-16 h-16 rounded-full bg-destructive text-white flex items-center justify-center border border-red-300/30 hover:bg-red-700 transition-colors">
                       <PhoneOff className="w-6 h-6 fill-current" />
                     </button>
-                    <button onClick={nextStage} className="w-16 h-16 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition-colors shadow-[0_0_20px_rgba(34,197,94,0.2)] group">
-                      <PhoneCall className="w-6 h-6 fill-current group-hover:animate-bounce" />
+                    <button aria-label="Answer call" onClick={nextStage} className="w-16 h-16 rounded-full bg-emerald-600 text-white flex items-center justify-center hover:bg-emerald-700 transition-colors shadow-lg group">
+                      <PhoneCall className="w-6 h-6 fill-current group-hover:rotate-12 transition-transform" />
                     </button>
                   </div>
-                </div>
+                </PhoneFrame>
               </motion.div>
             )}
 
@@ -239,7 +242,7 @@ export default function SimulationPage() {
               <motion.div key="active-call" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="w-full max-w-md mx-auto space-y-4">
                 
                 <div className="flex justify-between items-center px-2">
-                  <span className="text-xs text-muted-foreground font-light">Simulated Scenario</span>
+                  <span className="text-xs text-muted-foreground font-normal">Citizen Safety Demonstration</span>
                   {!showAlert && (
                      <Button variant="ghost" size="sm" onClick={skipToAlert} className="h-8 text-xs text-muted-foreground hover:text-foreground">
                        Skip to Security Alert <Play className="w-3 h-3 ml-1.5" />
@@ -247,14 +250,14 @@ export default function SimulationPage() {
                   )}
                 </div>
 
-                <div className="aspect-[9/16] bg-[#0A0A0C] border border-white/5 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden relative">
+                <PhoneFrame className="phone-light">
                   
                   {/* Top Bar */}
-                  <div className="pt-8 pb-4 flex flex-col items-center border-b border-white/5 bg-white/[0.01]">
-                    <div className="w-16 h-16 rounded-full bg-white/[0.02] border border-white/5 flex items-center justify-center mb-3">
-                      <Phone className="w-6 h-6 text-muted-foreground/50" />
+                  <div inert={showAlert} className="pt-8 pb-4 flex flex-col items-center border-b border-border bg-card">
+                    <div className="caller-avatar w-16 h-16 rounded-full border flex items-center justify-center mb-3">
+                      <Phone className="w-6 h-6 text-muted-foreground" />
                     </div>
-                    <h3 className="font-medium text-foreground/90">Bank Representative</h3>
+                    <h3 className="font-medium text-foreground/90">HDFC Fraud Desk <span className="text-xs text-amber-800">(Unverified)</span></h3>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs font-mono text-muted-foreground">
                         {Math.floor(currentTime / 60)}:{(currentTime % 60).toFixed(0).padStart(2, '0')}
@@ -263,10 +266,10 @@ export default function SimulationPage() {
                   </div>
 
                   {/* Vaani Kavach Status Bar */}
-                  <div className="px-4 py-3 bg-white/[0.02] border-b border-white/5 flex items-center justify-between">
+                  <div inert={showAlert} className="px-4 py-3 bg-card border-b border-border flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <ShieldCheck className={`w-4 h-4 ${currentTime > 10 ? 'text-amber-500' : 'text-green-500'}`} />
-                      <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Monitoring</span>
+                      <ShieldCheck className={`w-4 h-4 ${currentTime > 10 ? 'text-amber-800' : 'text-emerald-700'}`} />
+                      <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Monitoring</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {isSpeaking && (
@@ -276,16 +279,16 @@ export default function SimulationPage() {
                           <motion.div className="w-1 h-1 rounded-full bg-blue-500" animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} />
                         </div>
                       )}
-                      <span className={`text-xs font-mono ${currentTime > 10 ? 'text-amber-500' : 'text-green-500'}`}>
+                      <span className={`text-xs font-mono ${currentTime > 10 ? 'text-amber-800' : 'text-emerald-700'}`}>
                         {currentTime > 10 ? 'Analyzing Risk...' : 'Secure'}
                       </span>
                     </div>
                   </div>
 
                   {/* Scrolling Transcript */}
-                  <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#050505]">
+                  <div inert={showAlert} tabIndex={0} role="region" aria-label="Simulated call transcript" className="call-transcript flex-1 p-4 overflow-y-auto space-y-4 bg-background">
                     <div className="text-center mb-4">
-                      <span className="text-[10px] text-muted-foreground/40 uppercase tracking-widest bg-white/[0.02] px-2 py-1 rounded">Simulated Transcript</span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-widest bg-card px-2 py-1 rounded">Simulated Transcript</span>
                     </div>
                     {scenarioConfig.captions.map((cap, i) => (
                       currentTime >= cap.start && (
@@ -295,10 +298,10 @@ export default function SimulationPage() {
                           animate={{ opacity: 1, y: 0 }}
                           className={`flex flex-col ${cap.speaker === 'bank' ? 'items-start' : 'items-end'}`}
                         >
-                          <span className="text-[10px] text-muted-foreground/50 mb-1 ml-1">{cap.speaker === 'bank' ? 'Caller' : 'You'}</span>
+                          <span className="text-[10px] text-muted-foreground mb-1 ml-1">{cap.speaker === 'bank' ? 'Caller' : 'You'}</span>
                           <div className={`px-4 py-2.5 rounded-2xl max-w-[85%] text-sm leading-relaxed ${
                             cap.speaker === 'bank' 
-                              ? 'bg-white/10 text-foreground/90 rounded-tl-sm' 
+                              ? 'bg-secondary text-foreground/90 rounded-tl-sm'
                               : 'bg-blue-600 text-white rounded-tr-sm'
                           }`}>
                             {cap.text}
@@ -310,17 +313,17 @@ export default function SimulationPage() {
                   </div>
 
                   {/* Call Controls */}
-                  <div className="p-6 bg-white/[0.01] border-t border-white/5 flex justify-around items-center">
-                    <button onClick={() => setIsMuted(!isMuted)} className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isMuted ? 'bg-white/20' : 'bg-white/5 hover:bg-white/10'}`}>
+                  <div inert={showAlert} className="call-controls p-6 bg-card border-t border-border flex justify-around items-center">
+                    <button aria-label={isMuted ? "Unmute microphone" : "Mute microphone"} aria-pressed={isMuted} onClick={() => setIsMuted(!isMuted)} className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isMuted ? 'bg-primary/15' : 'bg-secondary hover:bg-secondary'}`}>
                       {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                     </button>
-                    <button className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                    <button aria-label="Keypad" className="w-12 h-12 rounded-full bg-secondary hover:bg-secondary flex items-center justify-center transition-colors">
                       <Grid3x3 className="w-5 h-5" />
                     </button>
-                    <button className="w-12 h-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors">
+                    <button aria-label="Speaker" className="w-12 h-12 rounded-full bg-secondary hover:bg-secondary flex items-center justify-center transition-colors">
                       <Volume2 className="w-5 h-5" />
                     </button>
-                    <button className="w-12 h-12 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center border border-red-500/20 hover:bg-red-500/30">
+                    <button aria-label="End call" className="w-12 h-12 rounded-full bg-red-500/20 text-red-700 flex items-center justify-center border border-red-500/20 hover:bg-red-500/30">
                       <PhoneOff className="w-5 h-5 fill-current" />
                     </button>
                   </div>
@@ -332,30 +335,31 @@ export default function SimulationPage() {
                         initial={{ opacity: 0, y: "100%" }} 
                         animate={{ opacity: 1, y: 0 }} 
                         exit={{ opacity: 0, y: "100%" }}
-                        className="absolute inset-x-0 bottom-0 top-0 bg-[#050505]/95 backdrop-blur-xl flex flex-col p-6 pt-16 z-20 overflow-y-auto"
+                        className="security-alert absolute inset-0 flex flex-col z-20 overflow-y-auto"
                       >
                         <div className="flex flex-col items-center text-center space-y-4 mb-8">
                           <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
-                            <ShieldAlert className="w-8 h-8 text-amber-500" />
+                            <ShieldAlert className="w-8 h-8 text-amber-800" />
                           </div>
-                          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Action Recommended</h2>
+                          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Verification Required</h2>
                           <p className="text-foreground/80 text-base leading-relaxed max-w-xs font-medium">
-                            Please verify this caller before transferring money.
+                            Do not transfer ₹25,000 until this caller is independently verified.
                           </p>
                         </div>
 
-                        <div className="w-full bg-[#0A0A0C] border border-white/5 rounded-xl p-4 space-y-4 mb-8">
-                          <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                        <div className="w-full bg-card border border-border rounded-xl p-4 space-y-4 mb-8">
+                          <div className="flex items-center justify-between border-b border-border pb-3">
                             <span className="text-sm text-muted-foreground">Voice Evidence</span>
-                            <span className="text-sm font-medium text-amber-500">Suspicious (Simulated)</span>
+                            <span className="text-sm font-medium text-amber-800">Suspicious (Simulated)</span>
                           </div>
                           <div className="flex items-center justify-between pb-1">
                             <span className="text-sm text-muted-foreground">Caller Identity</span>
-                            <span className="text-sm font-medium text-amber-500">Unverified</span>
+                            <span className="text-sm font-medium text-amber-800">Unverified</span>
                           </div>
 
-                          <div className="pt-2 border-t border-white/5">
+                          <div className="pt-2 border-t border-border">
                             <button 
+                              aria-expanded={viewWhy}
                               onClick={() => setViewWhy(!viewWhy)} 
                               className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 w-full text-center py-2"
                             >
@@ -370,21 +374,21 @@ export default function SimulationPage() {
                                   exit={{ height: 0, opacity: 0 }}
                                   className="overflow-hidden mt-4 space-y-4"
                                 >
-                                  <div className="pl-3 border-l-2 border-white/10 space-y-4">
+                                  <div className="pl-3 border-l-2 border-border space-y-4">
                                     <div className="relative">
-                                      <div className="absolute -left-[17px] top-1 w-2 h-2 rounded-full bg-white/20" />
-                                      <p className="text-xs font-medium">Payment Request Detected</p>
-                                      <p className="text-[11px] text-muted-foreground">Simulated caller asked for ₹25,000 transfer.</p>
+                                      <div className="absolute -left-[17px] top-1 w-2 h-2 rounded-full bg-primary/15" />
+                                      <p className="text-xs font-medium">Urgent Transfer Request Detected</p>
+                                      <p className="text-[11px] text-muted-foreground">Caller requested ₹25,000 for beneficiary Demo Recipient A while keeping you on the call.</p>
                                     </div>
                                     <div className="relative">
                                       <div className="absolute -left-[17px] top-1 w-2 h-2 rounded-full bg-amber-500" />
-                                      <p className="text-xs font-medium text-amber-500">Voice Risk Raised</p>
-                                      <p className="text-[11px] text-muted-foreground">Audio characteristics flagged as uncertain.</p>
+                                      <p className="text-xs font-medium text-amber-800">Voice Authenticity Uncertain</p>
+                                      <p className="text-[11px] text-muted-foreground">Synthetic voice characteristics were detected in the caller&apos;s audio.</p>
                                     </div>
                                     <div className="relative">
                                       <div className="absolute -left-[17px] top-1 w-2 h-2 rounded-full bg-amber-500" />
-                                      <p className="text-xs font-medium text-amber-500">Registry Check Failed</p>
-                                      <p className="text-[11px] text-muted-foreground">Caller ID origin could not be independently authenticated.</p>
+                                      <p className="text-xs font-medium text-amber-800">Bank Identity Not Verified</p>
+                                      <p className="text-[11px] text-muted-foreground">The phone number could not be authenticated as an official HDFC Bank calling channel.</p>
                                     </div>
                                   </div>
                                   <p className="text-[11px] text-muted-foreground pt-2 italic">Recommendation: Perform step-up verification.</p>
@@ -395,7 +399,7 @@ export default function SimulationPage() {
                         </div>
 
                         <div className="mt-auto space-y-4">
-                          <Button onClick={nextStage} className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-black rounded-xl text-base font-medium shadow-[0_0_20px_rgba(245,158,11,0.2)]">
+                          <Button onClick={nextStage} className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-black rounded-xl text-base font-medium shadow-sm">
                             Verify Caller
                           </Button>
                           <Button variant="ghost" onClick={replayConversation} className="w-full h-12 text-muted-foreground hover:text-foreground">
@@ -406,7 +410,7 @@ export default function SimulationPage() {
                     )}
                   </AnimatePresence>
 
-                </div>
+                </PhoneFrame>
               </motion.div>
             )}
 
@@ -414,20 +418,20 @@ export default function SimulationPage() {
             {currentStage === "VERIFICATION" && (
               <motion.div key="verification" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="w-full max-w-md mx-auto space-y-8">
                 <div className="text-center space-y-2 mb-8">
-                  <h2 className="text-3xl font-semibold tracking-tight">Security Challenge</h2>
-                  <p className="text-muted-foreground font-light text-sm">Vaani Kavach requested a step-up liveness check.</p>
+                  <h2 className="text-3xl font-semibold tracking-tight">Caller Verification</h2>
+                  <p className="text-muted-foreground font-normal text-sm">The caller must repeat a random code to prove they are responding live.</p>
                 </div>
 
-                <div className="p-6 border border-white/5 bg-[#0A0A0C] rounded-2xl space-y-8 shadow-2xl relative overflow-hidden">
+                <div className="surface-card p-6 rounded-2xl space-y-8 relative overflow-hidden">
                   
                   {/* Sequence 1: Request Button */}
                   {verificationStep === 0 && (
                     <div className="py-12 flex flex-col items-center justify-center text-center space-y-6">
-                      <Fingerprint className="w-12 h-12 text-muted-foreground/30" />
+                      <Fingerprint className="w-12 h-12 text-muted-foreground" />
                       <p className="text-sm text-muted-foreground leading-relaxed">
-                        Trigger a Voice CAPTCHA to verify if a live human is speaking.
+                        Send a random Voice CAPTCHA that was not part of the caller&apos;s prepared script.
                       </p>
-                      <Button onClick={startVerificationSequence} className="h-12 px-8 rounded-xl bg-white text-black hover:bg-gray-200">
+                      <Button onClick={startVerificationSequence} className="h-12 px-8 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
                         Request Voice Challenge
                       </Button>
                     </div>
@@ -436,8 +440,8 @@ export default function SimulationPage() {
                   {/* Sequence 2: Digits generated */}
                   {verificationStep >= 1 && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                      <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                      <div className="flex items-center gap-3 border-b border-border pb-4">
+                        <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
                           <Fingerprint className="w-5 h-5 text-foreground/70" />
                         </div>
                         <span className="font-medium text-sm">Challenge Dispatched</span>
@@ -452,11 +456,11 @@ export default function SimulationPage() {
 
                   {/* Sequence 3: Caller Response */}
                   {verificationStep >= 2 && (
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pt-4 border-t border-white/5">
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pt-4 border-t border-border">
                       <p className="text-xs text-muted-foreground uppercase tracking-widest mb-3">Simulated Caller Response</p>
-                      <div className="inline-flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.02] border border-white/5 w-full">
-                        <Activity className="w-4 h-4 text-amber-500" />
-                        <span className="text-sm text-amber-500 font-light italic">"Seven... two... uh..."</span>
+                      <div className="inline-flex items-center gap-3 px-4 py-2.5 rounded-xl bg-card border border-border w-full">
+                        <Activity className="w-4 h-4 text-amber-800" />
+                        <span className="text-sm text-amber-800 font-normal italic">&quot;Seven... two... I cannot hear the rest.&quot;</span>
                       </div>
                     </motion.div>
                   )}
@@ -465,15 +469,15 @@ export default function SimulationPage() {
                   {verificationStep >= 3 && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pt-4 space-y-4">
                       <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
-                        <ShieldAlert className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                        <ShieldAlert className="w-5 h-5 text-red-700 shrink-0 mt-0.5" />
                         <div className="space-y-1">
-                          <p className="text-sm font-medium text-red-500">Liveness Failed</p>
-                          <p className="text-xs text-red-400/80 leading-relaxed">
-                            The response did not satisfy the demo verification checks. 
+                          <p className="text-sm font-medium text-red-700">Liveness Failed</p>
+                          <p className="text-xs text-red-700 leading-relaxed">
+                            The caller did not repeat the complete random code 7294.
                           </p>
                         </div>
                       </div>
-                      <p className="text-[10px] text-muted-foreground/60 text-center">Note: CAPTCHA alone cannot definitively prove identity, but it signals high risk.</p>
+                      <p className="text-[10px] text-muted-foreground text-center">Combined with the transfer request, synthetic voice evidence and unverified number, this raises the session to high risk.</p>
                     </motion.div>
                   )}
                 </div>
@@ -494,30 +498,30 @@ export default function SimulationPage() {
             {currentStage === "PAYMENT" && (
               <motion.div key="payment" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.05 }} className="w-full max-w-sm mx-auto space-y-6">
                 <div className="text-center space-y-2 mb-2">
-                  <Badge variant="outline" className="border-white/10 text-muted-foreground bg-white/5 uppercase tracking-widest text-[10px]">Mobile Banking</Badge>
+                  <Badge variant="outline" className="border-border text-muted-foreground bg-secondary uppercase tracking-widest text-[10px]">Secure Banking Service</Badge>
                 </div>
 
-                <div className="bg-[#0A0A0C] border border-white/5 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col min-h-[600px] relative">
+                <PhoneFrame className="phone-light">
                   
                   {paymentStep === 0 ? (
                     <>
-                      <div className="h-16 border-b border-white/5 flex items-center justify-center px-4 bg-white/[0.01]">
+                      <div className="h-16 border-b border-border flex items-center justify-center px-4 bg-card">
                         <span className="font-semibold text-foreground/90 tracking-tight text-sm">Secure Banking Transfer</span>
                       </div>
 
                       <div className="flex-1 p-6 flex flex-col">
                         <div className="flex-1 flex flex-col items-center justify-center space-y-8">
-                          <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/10 mb-2">
-                            <Lock className="w-6 h-6 text-muted-foreground/50" />
+                          <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center border border-border mb-2">
+                            <Lock className="w-6 h-6 text-muted-foreground" />
                           </div>
                           
                           <div className="text-center space-y-2 w-full">
                             <p className="text-xs text-muted-foreground uppercase tracking-widest">Amount to Transfer</p>
-                            <p className="text-5xl font-light tracking-tight text-foreground">₹25,000</p>
+                            <p className="text-5xl font-normal tracking-tight text-foreground">₹25,000</p>
                           </div>
 
-                          <div className="w-full p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-4">
-                            <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                          <div className="w-full p-4 rounded-xl bg-card border border-border space-y-4">
+                            <div className="flex justify-between items-center border-b border-border pb-3">
                               <span className="text-xs text-muted-foreground">To</span>
                               <span className="text-sm font-medium">Demo Recipient A</span>
                             </div>
@@ -528,39 +532,39 @@ export default function SimulationPage() {
                           </div>
                         </div>
 
-                        <Button onClick={startPaymentSequence} className="w-full h-14 rounded-xl text-base font-medium mt-4 shadow-[0_0_15px_rgba(255,255,255,0.05)] bg-white text-black hover:bg-gray-200">
+                        <Button onClick={startPaymentSequence} className="w-full h-14 rounded-xl text-base font-medium mt-4 shadow-sm bg-primary text-primary-foreground hover:bg-primary/90">
                           Confirm Transfer
                         </Button>
                       </div>
                     </>
                   ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-8 text-center bg-[#050505]">
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-8 text-center bg-background">
                       <h3 className="text-xl font-medium mb-4">Processing Transfer</h3>
                       
                       <div className="w-full space-y-6 text-left">
                         {paymentStep >= 1 && (
                           <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex gap-4">
-                            <Activity className="w-5 h-5 text-amber-500 shrink-0" />
+                            <Activity className="w-5 h-5 text-amber-800 shrink-0" />
                             <div className="space-y-1">
                               <p className="text-sm font-medium">Call Risk Check</p>
-                              <p className="text-xs text-muted-foreground">Suspicious call assessment available.</p>
+                              <p className="text-xs text-muted-foreground">High-risk call: transfer request, uncertain voice and failed caller verification.</p>
                             </div>
                           </motion.div>
                         )}
                         
                         {paymentStep >= 2 && (
                           <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex gap-4">
-                            <FileKey className="w-5 h-5 text-blue-500 shrink-0" />
+                            <FileKey className="w-5 h-5 text-blue-700 shrink-0" />
                             <div className="space-y-1">
                               <p className="text-sm font-medium">Risk Receipt</p>
-                              <p className="text-xs text-muted-foreground">Call assessment associated with this ₹25,000 transaction.</p>
+                              <p className="text-xs text-muted-foreground">Assessment linked to ₹25,000 for Demo Recipient A.</p>
                             </div>
                           </motion.div>
                         )}
 
                         {paymentStep >= 3 && (
                           <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex gap-4">
-                            <ShieldCheck className="w-5 h-5 text-green-500 shrink-0" />
+                            <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0" />
                             <div className="space-y-1">
                               <p className="text-sm font-medium">Action Protection API</p>
                               <p className="text-xs text-muted-foreground">The simulated banking app checks the receipt and applies its configured security policy.</p>
@@ -571,7 +575,7 @@ export default function SimulationPage() {
                     </div>
                   )}
 
-                </div>
+                </PhoneFrame>
               </motion.div>
             )}
 
@@ -579,32 +583,32 @@ export default function SimulationPage() {
             {currentStage === "PROTECTION" && (
               <motion.div key="protection" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-3xl mx-auto space-y-12 py-8">
                 <div className="text-center space-y-6">
-                  <Badge variant="outline" className="border-white/10 text-muted-foreground bg-white/5 uppercase tracking-widest text-[10px] mb-4">Illustrative Simulation</Badge>
+                  <Badge variant="outline" className="border-border text-muted-foreground bg-secondary uppercase tracking-widest text-[10px] mb-4">Citizen Protection Demonstration</Badge>
                   
                   <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto border border-red-500/20">
-                    <Lock className="w-6 h-6 text-red-500" />
+                    <Lock className="w-6 h-6 text-red-700" />
                   </div>
-                  <h2 className="text-4xl font-semibold tracking-tight text-foreground">Transfer Held</h2>
-                  <p className="text-muted-foreground text-sm md:text-base font-light leading-relaxed max-w-xl mx-auto">
-                    Transfer held for independent verification.
+                  <h2 className="text-4xl font-semibold tracking-tight text-foreground">Transaction Safeguarded</h2>
+                  <p className="text-muted-foreground text-sm md:text-base font-normal leading-relaxed max-w-xl mx-auto">
+                    The ₹25,000 transfer to Demo Recipient A is held for independent bank verification.
                   </p>
                 </div>
 
-                <div className="p-8 border border-white/5 rounded-2xl bg-[#0A0A0C] flex flex-col md:flex-row items-center justify-between gap-8 max-w-2xl mx-auto">
+                <div className="p-8 border border-border rounded-2xl bg-card flex flex-col md:flex-row items-center justify-between gap-8 max-w-2xl mx-auto">
                   <div className="flex-1 space-y-2 text-center md:text-left">
                     <p className="text-sm font-medium text-foreground">Protection Chain Successful</p>
-                    <p className="text-xs text-muted-foreground font-light flex items-center justify-center md:justify-start gap-2">
+                    <p className="text-xs text-muted-foreground font-normal flex items-center justify-center md:justify-start gap-2">
                       CALL <ArrowRight className="w-3 h-3" /> RISK RECEIPT <ArrowRight className="w-3 h-3" /> BANKING ACTION
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="border-red-500/30 text-red-400 bg-red-500/5 px-3 py-1">API: BLOCK</Badge>
+                    <Badge variant="outline" className="border-red-500/30 text-red-700 bg-red-500/5 px-3 py-1">API: BLOCK</Badge>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-center gap-4 pt-12 border-t border-white/5">
+                <div className="flex flex-col sm:flex-row justify-center gap-4 pt-12 border-t border-border">
                   <Link href="/architecture">
-                    <Button variant="outline" className="w-full sm:w-auto border-white/10 hover:bg-white/[0.02] h-12">
+                    <Button variant="outline" className="w-full sm:w-auto border-border hover:bg-card h-12">
                       Understand How It Works
                     </Button>
                   </Link>
@@ -616,7 +620,7 @@ export default function SimulationPage() {
                 </div>
                 
                 <div className="text-center pt-6">
-                  <button onClick={restart} className="text-xs text-muted-foreground/50 hover:text-foreground transition-colors uppercase tracking-widest font-medium">
+                  <button onClick={restart} className="text-xs text-muted-foreground hover:text-foreground transition-colors uppercase tracking-widest font-medium">
                     Restart Experience
                   </button>
                 </div>

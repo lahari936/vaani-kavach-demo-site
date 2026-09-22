@@ -26,10 +26,11 @@ export function TechnicalExplanation({ data, minimal = false }: TechnicalExplana
   const displayTitle = minimal ? data.title.replace(/^\d+\.\s*/, '') : data.title;
 
   return (
-    <div className="border border-white/10 rounded-md overflow-hidden bg-background font-sans">
+    <div className="technical-explanation border border-border rounded-xl overflow-hidden bg-card font-sans">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/[0.02] transition-colors text-left"
+        aria-expanded={isOpen}
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-card transition-colors text-left"
       >
         <span className="font-medium text-sm text-foreground/90">
           {minimal ? `How does this work? (${displayTitle})` : displayTitle}
@@ -60,7 +61,7 @@ export function TechnicalExplanation({ data, minimal = false }: TechnicalExplana
               <ul className="space-y-2">
                 {data.details.map((detail, idx) => (
                   <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2 leading-relaxed">
-                    <span className="text-muted-foreground/40 mt-1">—</span>
+                    <span className="text-muted-foreground mt-1">—</span>
                     <span dangerouslySetInnerHTML={{ __html: detail.replace(/([A-Z]{3,})/g, '<span class="font-medium text-foreground/80">$1</span>') }} />
                   </li>
                 ))}
