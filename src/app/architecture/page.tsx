@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useRef, useState } from "react";
 import { Activity, ArrowLeft, CheckCircle2, ChevronRight, FileKey, Lock, Network, Phone, ShieldAlert, ShieldCheck } from "lucide-react";
 import { explanations } from "@/config/explanations";
 import { TechnicalExplanation } from "@/components/TechnicalExplanation";
@@ -9,14 +8,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const architectureNodes = [
-  { id: "call", icon: <Phone />, data: explanations.call },
-  { id: "processing", icon: <Network />, data: explanations.processing },
-  { id: "detection", icon: <Activity />, data: explanations.detection },
-  { id: "verification", icon: <CheckCircle2 />, data: explanations.verification },
-  { id: "risk", icon: <ShieldAlert />, data: explanations.risk },
-  { id: "receipt", icon: <FileKey />, data: explanations.receipt },
-  { id: "payment", icon: <Lock />, data: explanations.payment },
-  { id: "privacy", icon: <ShieldCheck />, data: explanations.privacy },
+  { id: "call", title: "Join the call", description: "Connect Vaani Kavach to a call", icon: <Phone />, data: explanations.call },
+  { id: "processing", title: "Prepare the audio", description: "Make speech ready for analysis", icon: <Network />, data: explanations.processing },
+  { id: "detection", title: "Analyse the voice", description: "Check for signs of a synthetic voice", icon: <Activity />, data: explanations.detection },
+  { id: "verification", title: "Verify the caller", description: "Check who is calling", icon: <CheckCircle2 />, data: explanations.verification },
+  { id: "risk", title: "Assess the risk", description: "Identify when extra checks are needed", icon: <ShieldAlert />, data: explanations.risk },
+  { id: "receipt", title: "Create a risk receipt", description: "Link the assessment to a transaction", icon: <FileKey />, data: explanations.receipt },
+  { id: "payment", title: "Protect the payment", description: "Check the risk before money moves", icon: <Lock />, data: explanations.payment },
+  { id: "privacy", title: "Protect your privacy", description: "Handle call data with care", icon: <ShieldCheck />, data: explanations.privacy },
 ];
 
 const phases = [
@@ -35,9 +34,27 @@ const statusStyles = {
 
 export default function ArchitecturePage() {
   const [activeNode, setActiveNode] = useState("call");
+  const detailsRef = useRef<HTMLElement>(null);
   const activeIndex = architectureNodes.findIndex((node) => node.id === activeNode);
   const activeItem = architectureNodes[activeIndex];
   const activePhase = phases.find((phase) => phase.ids.includes(activeNode));
+
+  const scrollToElement = (element: HTMLElement | null) => {
+    if (!element) return;
+    element.focus({ preventScroll: true });
+    element.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+      block: "start",
+    });
+  };
+
+  const selectModule = (id: string) => {
+    setActiveNode(id);
+    // Wait for the selected content to render, including when reselecting a module.
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      requestAnimationFrame(() => scrollToElement(detailsRef.current));
+    }
+  };
 
   return (
     <div className="page-shell architecture-page container mx-auto px-5 max-w-6xl min-h-[calc(100vh-4rem)]">
@@ -53,47 +70,41 @@ export default function ArchitecturePage() {
           <h1 className="page-heading text-4xl sm:text-5xl font-semibold text-foreground">Technology Architecture</h1>
           <p className="text-muted-foreground leading-relaxed text-lg">Review the secure technology workflow behind Vaani Kavach.</p>
         </div>
-        <div className="architecture-summary" aria-label="Architecture summary">
-          <strong>4</strong><span>Operational phases</span><i />
-          <strong>8</strong><span>Technical modules</span>
-        </div>
       </header>
 
       <div className="architecture-workspace">
         <section className="architecture-flow" aria-label="Vaani Kavach architecture workflow">
           <div className="architecture-flow-intro">
-            <span>End-to-end workflow</span>
-            <small>Select any module to inspect it</small>
+            <span>Explore the modules</span>
+            <small>Select a module to view its details</small>
           </div>
 
           {phases.map((phase) => (
             <div className="architecture-phase" key={phase.number}>
               <div className="architecture-phase-heading">
-                <span>{phase.number}</span>
-                <div><h2>{phase.title}</h2><p>{phase.description}</p></div>
+                <h2>{phase.title}</h2>
               </div>
 
               <div className="architecture-phase-modules">
                 {phase.ids.map((id) => {
                   const node = architectureNodes.find((item) => item.id === id)!;
-                  const index = architectureNodes.findIndex((item) => item.id === id);
                   return (
-                    <motion.button
+                    <button
                       key={node.id}
-                      whileHover={{ x: 3 }}
-                      whileTap={{ scale: 0.99 }}
-                      onClick={() => setActiveNode(node.id)}
+                      id={`module-${node.id}`}
+                      type="button"
+                      onClick={() => selectModule(node.id)}
                       aria-pressed={activeNode === id}
+                      aria-controls="module-details"
                       className="architecture-node"
                     >
-                      <span className="architecture-step">{String(index + 1).padStart(2, "0")}</span>
-                      <span className="icon-tile architecture-node-icon">{node.icon}</span>
+                      <span className="icon-tile architecture-node-icon" aria-hidden="true">{node.icon}</span>
                       <span className="architecture-node-copy">
-                        <strong>{node.data.title.replace(/^\d+\.\s*/, "")}</strong>
-                        <small className={statusStyles[node.data.label]}>{node.data.label}</small>
+                        <strong>{node.title}</strong>
+                        <span>{node.description}</span>
                       </span>
                       <ChevronRight className="architecture-chevron" aria-hidden="true" />
-                    </motion.button>
+                    </button>
                   );
                 })}
               </div>
@@ -101,16 +112,15 @@ export default function ArchitecturePage() {
           ))}
         </section>
 
-        <aside className="architecture-inspector" aria-live="polite">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeNode}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-              className="architecture-details"
+        <aside ref={detailsRef} id="module-details" tabIndex={-1} className="architecture-inspector" aria-labelledby="module-details-title">
+            <button
+              type="button"
+              className="architecture-back"
+              onClick={() => scrollToElement(document.getElementById(`module-${activeNode}`))}
             >
+              <ArrowLeft aria-hidden="true" /> Back to modules
+            </button>
+            <div className="architecture-details" aria-live="polite">
               <div className="architecture-details-topline">
                 <span>Module {String(activeIndex + 1).padStart(2, "0")} of 08</span>
                 <span>{activePhase?.title} phase</span>
@@ -119,27 +129,21 @@ export default function ArchitecturePage() {
                 <div className="icon-tile">{activeItem.icon}</div>
                 <div>
                   <span className={`architecture-status ${statusStyles[activeItem.data.label]}`}>{activeItem.data.label}</span>
-                  <h2>{activeItem.data.title.replace(/^\d+\.\s*/, "")}</h2>
+                  <h2 id="module-details-title">{activeItem.title}</h2>
                 </div>
               </div>
               <p className="architecture-summary-copy">{activeItem.data.summary}</p>
 
-              <div className="architecture-position" aria-label={`Module ${activeIndex + 1} of 8`}>
-                {architectureNodes.map((node, index) => (
-                  <button
-                    key={node.id}
-                    type="button"
-                    onClick={() => setActiveNode(node.id)}
-                    aria-label={`Open module ${index + 1}: ${node.data.title.replace(/^\d+\.\s*/, "")}`}
-                    aria-current={node.id === activeNode ? "step" : undefined}
-                  />
-                ))}
-              </div>
-
-              <TechnicalExplanation data={activeItem.data} minimal />
-              <p className="architecture-help">Open the panel above for implementation notes and technical evidence.</p>
-            </motion.div>
-          </AnimatePresence>
+              <TechnicalExplanation key={activeNode} data={activeItem.data} minimal />
+              <nav className="architecture-module-nav" aria-label="Browse modules">
+                <button type="button" disabled={activeIndex === 0} onClick={() => selectModule(architectureNodes[activeIndex - 1].id)}>
+                  <ArrowLeft aria-hidden="true" /> Previous
+                </button>
+                <button type="button" disabled={activeIndex === architectureNodes.length - 1} onClick={() => selectModule(architectureNodes[activeIndex + 1].id)}>
+                  Next <ChevronRight aria-hidden="true" />
+                </button>
+              </nav>
+            </div>
         </aside>
       </div>
     </div>

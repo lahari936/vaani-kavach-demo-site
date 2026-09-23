@@ -16,7 +16,6 @@ export default function SimulationPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
-  const [viewWhy, setViewWhy] = useState(false);
   
   // Verification Sequence State
   const [verificationStep, setVerificationStep] = useState(0);
@@ -34,7 +33,6 @@ export default function SimulationPage() {
   const nextStage = () => {
     setStageIndex(s => Math.min(s + 1, STAGES.length - 1));
     setShowAlert(false);
-    setViewWhy(false);
     setVerificationStep(0);
     setPaymentStep(0);
   };
@@ -43,7 +41,6 @@ export default function SimulationPage() {
     setStageIndex(0);
     setCurrentTime(0);
     setShowAlert(false);
-    setViewWhy(false);
     setVerificationStep(0);
     setPaymentStep(0);
     if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -60,7 +57,6 @@ export default function SimulationPage() {
   const replayConversation = () => {
     setCurrentTime(0);
     setShowAlert(false);
-    setViewWhy(false);
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
@@ -117,7 +113,7 @@ export default function SimulationPage() {
   // Voice Announcement 2: Security Alert
   useEffect(() => {
     if (currentStage === "ACTIVE CALL" && showAlert) {
-      speak("Security alert. This unverified caller requested a twenty-five-thousand-rupee transfer. Verify the caller before taking action.");
+      speak(`Suspected bank fraud. Flagged ${scenarioConfig.callerRisk.verifiedFlagCount} times, verified. Risk score ${scenarioConfig.callerRisk.score} out of 100.`);
     }
   }, [showAlert, currentStage, speak]);
 
@@ -211,6 +207,13 @@ export default function SimulationPage() {
                 <div className="text-center space-y-2 mb-4">
                   <Badge variant="outline" className="border-red-500/20 text-red-700 bg-red-500/5 uppercase tracking-widest text-[10px]">Citizen Perspective</Badge>
                   <p className="text-muted-foreground text-sm font-normal">A caller claiming to represent your bank&apos;s fraud desk is contacting you.</p>
+                  <Link
+                    href="/architecture"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium text-primary underline underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                    title="Continue to System Overview"
+                  >
+                    Skip demonstration <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                  </Link>
                 </div>
 
                 <PhoneFrame className="phone-incoming">
@@ -219,7 +222,7 @@ export default function SimulationPage() {
                       <Phone className="w-10 h-10 text-muted-foreground" />
                     </div>
                     <div className="text-center space-y-1">
-                      <h2 className="text-2xl font-medium tracking-tight text-foreground/90">HDFC Fraud Desk</h2>
+                      <h2 className="text-2xl font-medium tracking-tight text-foreground/90">Bank fraud Desk</h2>
                       <p className="text-sm text-muted-foreground">Incoming Call...</p>
                       <p className="text-[11px] text-muted-foreground font-mono mt-2">+91 98765 43210</p>
                     </div>
@@ -257,7 +260,7 @@ export default function SimulationPage() {
                     <div className="caller-avatar w-16 h-16 rounded-full border flex items-center justify-center mb-3">
                       <Phone className="w-6 h-6 text-muted-foreground" />
                     </div>
-                    <h3 className="font-medium text-foreground/90">HDFC Fraud Desk <span className="text-xs text-amber-800">(Unverified)</span></h3>
+                    <h3 className="font-medium text-foreground/90">Bank fraud Desk <span className="text-xs text-amber-800">(Unverified)</span></h3>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs font-mono text-muted-foreground">
                         {Math.floor(currentTime / 60)}:{(currentTime % 60).toFixed(0).padStart(2, '0')}
@@ -341,62 +344,19 @@ export default function SimulationPage() {
                           <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
                             <ShieldAlert className="w-8 h-8 text-amber-800" />
                           </div>
-                          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Verification Required</h2>
-                          <p className="text-foreground/80 text-base leading-relaxed max-w-xs font-medium">
-                            Do not transfer ₹25,000 until this caller is independently verified.
-                          </p>
+                          <h2 className="text-2xl font-semibold tracking-tight text-foreground">Suspected bank fraud</h2>
                         </div>
 
-                        <div className="w-full bg-card border border-border rounded-xl p-4 space-y-4 mb-8">
-                          <div className="flex items-center justify-between border-b border-border pb-3">
-                            <span className="text-sm text-muted-foreground">Voice Evidence</span>
-                            <span className="text-sm font-medium text-amber-800">Suspicious (Simulated)</span>
+                        <dl className="w-full bg-card border border-border rounded-xl p-4 space-y-4 mb-8">
+                          <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+                            <dt className="text-sm text-muted-foreground">Flagged (verified)</dt>
+                            <dd className="text-sm font-semibold text-foreground tabular-nums">{scenarioConfig.callerRisk.verifiedFlagCount} times</dd>
                           </div>
-                          <div className="flex items-center justify-between pb-1">
-                            <span className="text-sm text-muted-foreground">Caller Identity</span>
-                            <span className="text-sm font-medium text-amber-800">Unverified</span>
+                          <div className="flex items-center justify-between gap-3">
+                            <dt className="text-sm text-muted-foreground">Risk score</dt>
+                            <dd className="text-sm font-semibold text-amber-800 tabular-nums">{scenarioConfig.callerRisk.score}/100</dd>
                           </div>
-
-                          <div className="pt-2 border-t border-border">
-                            <button 
-                              aria-expanded={viewWhy}
-                              onClick={() => setViewWhy(!viewWhy)} 
-                              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 w-full text-center py-2"
-                            >
-                              {viewWhy ? "Hide Timeline" : "View Why"}
-                            </button>
-                            
-                            <AnimatePresence>
-                              {viewWhy && (
-                                <motion.div 
-                                  initial={{ height: 0, opacity: 0 }} 
-                                  animate={{ height: "auto", opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden mt-4 space-y-4"
-                                >
-                                  <div className="pl-3 border-l-2 border-border space-y-4">
-                                    <div className="relative">
-                                      <div className="absolute -left-[17px] top-1 w-2 h-2 rounded-full bg-primary/15" />
-                                      <p className="text-xs font-medium">Urgent Transfer Request Detected</p>
-                                      <p className="text-[11px] text-muted-foreground">Caller requested ₹25,000 for beneficiary Demo Recipient A while keeping you on the call.</p>
-                                    </div>
-                                    <div className="relative">
-                                      <div className="absolute -left-[17px] top-1 w-2 h-2 rounded-full bg-amber-500" />
-                                      <p className="text-xs font-medium text-amber-800">Voice Authenticity Uncertain</p>
-                                      <p className="text-[11px] text-muted-foreground">Synthetic voice characteristics were detected in the caller&apos;s audio.</p>
-                                    </div>
-                                    <div className="relative">
-                                      <div className="absolute -left-[17px] top-1 w-2 h-2 rounded-full bg-amber-500" />
-                                      <p className="text-xs font-medium text-amber-800">Bank Identity Not Verified</p>
-                                      <p className="text-[11px] text-muted-foreground">The phone number could not be authenticated as an official HDFC Bank calling channel.</p>
-                                    </div>
-                                  </div>
-                                  <p className="text-[11px] text-muted-foreground pt-2 italic">Recommendation: Perform step-up verification.</p>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                        </div>
+                        </dl>
 
                         <div className="mt-auto space-y-4">
                           <Button onClick={nextStage} className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-black rounded-xl text-base font-medium shadow-sm">

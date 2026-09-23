@@ -1,8 +1,13 @@
 export const scenarioConfig = {
+  // Simulated caller history and risk score for the citizen safety demonstration.
+  callerRisk: {
+    verifiedFlagCount: 12,
+    score: 92,
+  },
   captions: [
     { start: 1, end: 4, speaker: "bank", text: "Hello, am I speaking with the account holder?" },
     { start: 5, end: 7, speaker: "customer", text: "Yes, speaking. How can I help you?" },
-    { start: 8, end: 13, speaker: "bank", text: "This is Rahul from HDFC Bank's fraud desk. A ₹25,000 UPI transfer was attempted from your account." },
+    { start: 8, end: 13, speaker: "bank", text: "This is Rahul from Bank fraud Desk. A ₹25,000 UPI transfer was attempted from your account." },
     { start: 14, end: 16, speaker: "customer", text: "I did not authorize any transfer." },
     { start: 17, end: 22, speaker: "bank", text: "To stop it, immediately transfer ₹25,000 to our secure holding beneficiary, Demo Recipient A." },
     { start: 23, end: 26, speaker: "customer", text: "Why is a bank asking me to transfer money to that beneficiary?" },

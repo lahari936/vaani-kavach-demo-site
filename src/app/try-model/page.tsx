@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Mic, Upload, StopCircle, Loader2, AlertCircle, FileKey, Terminal } from "lucide-react";
 import { analyzeAudio, InferenceResult } from "@/services/modelApiClient";
+
+const ERROR_MESSAGE = "Code 4213";
+const unavailableDetails = {
+  model: "Real AI model integration is in progress. API endpoint not yet available.",
+  api: "API exchange logs are unavailable because the backend is not connected.",
+  receipt: "Receipt security is unavailable because the signing mechanism is not deployed.",
+};
 
 export default function TryModelPage() {
   const [activeTab, setActiveTab] = useState<"model" | "api" | "receipt">("model");
@@ -12,6 +19,10 @@ export default function TryModelPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<InferenceResult | null>(null);
+
+  useEffect(() => {
+    console.warn(`[${ERROR_MESSAGE}]`, unavailableDetails[activeTab]);
+  }, [activeTab]);
 
   const toggleRecording = () => {
     setIsRecording(!isRecording);
@@ -37,9 +48,13 @@ export default function TryModelPage() {
     
     try {
       const res = await analyzeAudio(audioData);
+      if (res.error || res.status === "error" || res.status === "not_connected") {
+        console.error(`[${ERROR_MESSAGE}] Audio analysis:`, res.error || res.status);
+      }
       setResult(res);
     } catch (error) {
-      console.error(error);
+      console.error(`[${ERROR_MESSAGE}] Audio analysis:`, error);
+      setResult({ status: "error" });
     } finally {
       setIsProcessing(false);
     }
@@ -57,10 +72,7 @@ export default function TryModelPage() {
       <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-4 mx-auto max-w-2xl">
         <AlertCircle className="w-5 h-5 text-amber-800 shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <h3 className="font-medium text-amber-800 text-sm">Secure API integration is under implementation</h3>
-          <p className="text-amber-800 text-xs font-normal leading-relaxed">
-            The real Vaani Kavach model is pending backend connection. This workbench will not fake successful cryptographic validation or generate simulated JSON responses.
-          </p>
+          <p className="font-medium text-amber-800 text-sm">{ERROR_MESSAGE}</p>
         </div>
       </div>
 
@@ -166,8 +178,7 @@ export default function TryModelPage() {
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col">
                       <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
                         <AlertCircle className="w-8 h-8 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground font-normal">{result.error}</p>
-                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">API Disconnected</span>
+                        <p className="text-sm text-muted-foreground font-normal">{ERROR_MESSAGE}</p>
                       </div>
                     </motion.div>
                   ) : (
@@ -186,10 +197,7 @@ export default function TryModelPage() {
             <motion.div key="api" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
               <div className="flex flex-col items-center justify-center py-16 text-center space-y-4 bg-card border border-dashed border-border rounded-xl">
                 <Terminal className="w-12 h-12 text-muted-foreground" />
-                <h3 className="text-lg font-medium">API Logs Unavailable</h3>
-                <p className="text-muted-foreground font-normal max-w-md">
-                  Once the backend is connected, this panel will display the live JSON payloads sent between the banking interface and the Action Protection API.
-                </p>
+                <h3 className="text-lg font-medium">{ERROR_MESSAGE}</h3>
               </div>
             </motion.div>
           )}
@@ -199,10 +207,7 @@ export default function TryModelPage() {
             <motion.div key="receipt" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
               <div className="flex flex-col items-center justify-center py-16 text-center space-y-4 bg-card border border-dashed border-border rounded-xl">
                 <FileKey className="w-12 h-12 text-muted-foreground" />
-                <h3 className="text-lg font-medium">Cryptographic Playground Unavailable</h3>
-                <p className="text-muted-foreground font-normal max-w-md">
-                  When the signing mechanism is deployed, you will be able to alter transaction amounts or payees here and watch the HMAC-SHA256 verification fail in real-time.
-                </p>
+                <h3 className="text-lg font-medium">{ERROR_MESSAGE}</h3>
               </div>
             </motion.div>
           )}

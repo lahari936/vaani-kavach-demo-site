@@ -46,16 +46,16 @@ for (const width of [375, 1440]) {
     await expect(page.getByRole("button", { name: "Unmute microphone", exact: true })).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("button", { name: "Unmute microphone", exact: true }).click();
     await page.getByRole("button", { name: "Skip to Security Alert" }).click();
-    await expect(page.getByRole("heading", { name: "Verification Required" })).toBeVisible();
-    await page.getByRole("button", { name: "View Why" }).click();
-    await expect(page.getByText("Bank Identity Not Verified")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Suspected bank fraud" })).toBeVisible();
+    await expect(page.locator(".security-alert")).toContainText("Flagged (verified)");
+    await expect(page.locator(".security-alert")).toContainText("12 times");
+    await expect(page.locator(".security-alert")).toContainText("92/100");
     await noOverflow(page);
-    await page.screenshot({ path: testInfo.outputPath(`alert-expanded-${width}.png`), fullPage: true });
-    await page.getByRole("button", { name: "Hide Timeline" }).click();
+    await page.screenshot({ path: testInfo.outputPath(`alert-${width}.png`), fullPage: true });
     await accessible(page);
     await page.getByRole("button", { name: "Replay Conversation" }).click();
     await expect(page.getByRole("button", { name: "Skip to Security Alert" })).toBeVisible();
-    await expect(page.getByText("Verification Required")).toHaveCount(0);
+    await expect(page.getByText("Suspected bank fraud")).toHaveCount(0);
     await page.getByRole("button", { name: "Skip to Security Alert" }).click();
     await page.getByRole("button", { name: "Verify Caller", exact: true }).click();
     await expect(page.getByRole("button", { name: "Attempt Transfer" })).toBeDisabled();
@@ -92,10 +92,14 @@ test("timed transcript and automatic security alert", async ({ page }) => {
   await page.getByRole("button", { name: "Answer call", exact: true }).click();
   await expect(page.getByText("Hello, am I speaking with the account holder?")).toBeVisible();
   await expect(page.getByText("Analyzing Risk...")).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole("heading", { name: "Verification Required" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "Suspected bank fraud" })).toBeVisible({ timeout: 20_000 });
 });
 
 test("architecture details and original workbench controls", async ({ page }) => {
+  const diagnostics: string[] = [];
+  page.on("console", message => {
+    if (message.type() === "error" || message.type() === "warning") diagnostics.push(message.text());
+  });
   await page.goto("/architecture");
   const nodes = page.locator(".architecture-node");
   await expect(nodes).toHaveCount(8);
@@ -103,8 +107,7 @@ test("architecture details and original workbench controls", async ({ page }) =>
     const title = await nodes.nth(index).locator("strong").innerText();
     await nodes.nth(index).click();
     const disclosure = page.locator(".technical-explanation > button");
-    // AnimatePresence retains the previous module until its exit finishes.
-    await expect(disclosure).toContainText(title);
+    await expect(page.locator("#module-details-title")).toHaveText(title);
     await expect(disclosure).toHaveAttribute("aria-expanded", "false");
     await disclosure.click();
     await expect(disclosure).toHaveAttribute("aria-expanded", "true");
@@ -121,12 +124,89 @@ test("architecture details and original workbench controls", async ({ page }) =>
   await chooser.setFiles({ name: "voice.wav", mimeType: "audio/wav", buffer: Buffer.from("RIFF-test-audio") });
   await expect(page.getByRole("button", { name: "Change File" })).toBeVisible();
   await page.getByRole("button", { name: "Send to Inference Engine" }).click();
-  await expect(page.getByText("API Disconnected")).toBeVisible();
-  await expect(page.getByText("Real AI model integration is in progress. API endpoint not yet available.")).toBeVisible();
+  await expect(page.locator(".workbench-output")).toHaveText("Code 4213");
+  await expect(page.locator("main").getByText("Real AI model integration is in progress. API endpoint not yet available.")).toHaveCount(0);
+  expect(diagnostics.some(message => message.includes("[Code 4213] Audio analysis:") && message.includes("API endpoint not yet available"))).toBe(true);
   await page.getByRole("button", { name: "B. API Exchange" }).click();
-  await expect(page.getByText("API Logs Unavailable")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Code 4213" })).toBeVisible();
+  await expect(page.getByText("API Logs Unavailable")).toHaveCount(0);
   await page.getByRole("button", { name: "C. Receipt Security" }).click();
-  await expect(page.getByText("Cryptographic Playground Unavailable")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Code 4213" })).toBeVisible();
+  await expect(page.getByText("Cryptographic Playground Unavailable")).toHaveCount(0);
+});
+
+for (const reducedMotion of ["reduce", "no-preference"] as const) {
+  test(`mobile modules scroll to details and back with ${reducedMotion} motion`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.emulateMedia({ reducedMotion });
+    await page.goto("/architecture");
+    const nodes = page.locator(".architecture-node");
+    const details = page.locator("#module-details");
+    const heading = page.locator("#module-details-title");
+
+    // The initially selected module must scroll too, as must distant selections.
+    for (const index of [0, 7, 3]) {
+      const title = await nodes.nth(index).locator("strong").innerText();
+      await nodes.nth(index).click();
+      await expect(heading).toHaveText(title);
+      await expect(details).toBeFocused();
+      await expect(heading).toBeInViewport();
+      await expect.poll(async () => heading.evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThan(64);
+      await page.getByRole("button", { name: "Back to modules" }).click();
+      await expect(nodes.nth(index)).toBeFocused();
+      await expect(nodes.nth(index)).toBeInViewport();
+    }
+
+    await nodes.nth(3).click();
+    await page.getByRole("button", { name: "Technical details", exact: true }).click();
+    await expect(page.locator(".technical-explanation li").first()).toBeVisible();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(heading).toHaveText("Assess the risk");
+    await expect(heading).toBeInViewport();
+    await expect(page.getByRole("button", { name: "Technical details", exact: true })).toHaveAttribute("aria-expanded", "false");
+    await page.getByRole("button", { name: "Previous", exact: true }).click();
+    await expect(heading).toHaveText("Verify the caller");
+    await noOverflow(page);
+    await accessible(page);
+    await page.screenshot({ path: testInfo.outputPath(`module-details-${reducedMotion}.png`), fullPage: true });
+  });
+}
+
+test("desktop module selection keeps focus on the module", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/architecture");
+  const moduleButton = page.locator("#module-processing");
+  await moduleButton.click();
+  await expect(moduleButton).toBeFocused();
+  await expect(page.locator("#module-details-title")).toHaveText("Prepare the audio");
+  await expect(page.getByRole("button", { name: "Back to modules" })).toBeHidden();
+  await noOverflow(page);
+});
+
+test("team page shows the supplied members, portraits and profile links", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.goto("/team");
+
+  const members = [
+    ["Panchagnula Abhinav", "abhinavpanchagni", "panchagnula-abhinav-674538333"],
+    ["Vadakattu Sai Ram Charan", "vadakatturamcharansai-cmd", "ram-charan-sai-vadakattu-9a8911385"],
+    ["Lahari Raaparthi", "lahari936", "lahari-raaparthi-605bb9308"],
+    ["Sushruth Chari Ramneti", "susruthchari", "susruth-chari-ramneti-763203380"],
+    ["Sathwika Pathi", "sathwikapathi", "sathwika-pathi-37898933b"],
+  ];
+
+  const cards = page.locator(".team-card");
+  await expect(cards).toHaveCount(members.length);
+  for (const [index, [name, githubUser, linkedinProfile]] of members.entries()) {
+    const card = cards.nth(index);
+    await expect(card.getByRole("heading", { name })).toBeVisible();
+    await expect(card.getByRole("img", { name: `Portrait of ${name}` })).toBeVisible();
+    await expect(card.getByRole("link", { name: `${name} on GitHub` })).toHaveAttribute("href", new RegExp(`github\\.com/${githubUser}$`));
+    await expect(card.getByRole("link", { name: `${name} on LinkedIn` })).toHaveAttribute("href", new RegExp(`linkedin\\.com/in/${linkedinProfile}$`));
+  }
+
+  await noOverflow(page);
+  await accessible(page);
 });
 
 test("mobile navigation, keyboard focus and reduced motion", async ({ page }) => {

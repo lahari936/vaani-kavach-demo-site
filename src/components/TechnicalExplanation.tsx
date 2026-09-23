@@ -33,7 +33,7 @@ export function TechnicalExplanation({ data, minimal = false }: TechnicalExplana
         className="w-full px-4 py-3 flex items-center justify-between hover:bg-card transition-colors text-left"
       >
         <span className="font-medium text-sm text-foreground/90">
-          {minimal ? `How does this work? (${displayTitle})` : displayTitle}
+          {minimal ? "Technical details" : displayTitle}
         </span>
         <div className="flex items-center gap-3">
           {!minimal && (
@@ -57,7 +57,7 @@ export function TechnicalExplanation({ data, minimal = false }: TechnicalExplana
             className="overflow-hidden"
           >
             <div className="px-4 pb-4 pt-1">
-              <p className="text-sm font-medium text-foreground/80 mb-3">{data.summary}</p>
+              {!minimal && <p className="text-sm font-medium text-foreground/80 mb-3">{data.summary}</p>}
               <ul className="space-y-2">
                 {data.details.map((detail, idx) => (
                   <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2 leading-relaxed">
