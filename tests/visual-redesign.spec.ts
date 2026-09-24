@@ -167,7 +167,7 @@ test("architecture details and original workbench controls", async ({ page }) =>
 
   await page.getByRole("button", { name: "C. Receipt Security" }).click();
   const receipt = page.getByRole("textbox", { name: "Risk receipt JSON" });
-  await expect(receipt).toContainText("VK-64DF9C62");
+  await expect(receipt).toHaveValue(/VK-64DF9C62/);
   await page.getByRole("button", { name: "Verify signature" }).click();
   await expect(page.getByText("VALID", { exact: true })).toBeVisible();
   // Editing any field must fail the signature and drop the voice evidence.
