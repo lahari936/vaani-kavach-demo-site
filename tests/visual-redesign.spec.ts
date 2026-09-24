@@ -115,14 +115,14 @@ const DETECT = {
 };
 
 async function stubDetector(page: Page) {
-  await page.route("**/api/vaani/health", route => route.fulfill({ json: HEALTH }));
-  await page.route("**/api/vaani/voice/detect", route => route.fulfill({ json: DETECT }));
-  await page.route("**/api/vaani/receipt/verify", async route => {
+  await page.route("**/health", route => route.fulfill({ json: HEALTH }));
+  await page.route("**/api/v1/voice/detect", route => route.fulfill({ json: DETECT }));
+  await page.route("**/api/v1/receipt/verify", async route => {
     const sent = route.request().postDataJSON();
     const valid = sent?.risk_score === DETECT.receipt.risk_score;
     await route.fulfill({ json: { valid, reason: valid ? "signature valid" : "signature does not match — receipt was altered or forged" } });
   });
-  await page.route("**/api/vaani/action/authorize", route => route.fulfill({
+  await page.route("**/api/v1/action/authorize", route => route.fulfill({
     json: { decision: "STEP_UP", risk_level: "HIGH", final_risk: 100, voice_risk: 83,
       voice_verified: true, context_risk: 25, context_reasons: [], step_up_methods: ["trusted_callback"] },
   }));

@@ -32,7 +32,14 @@ export default function TryModelPage() {
 
   useEffect(() => {
     getHealth().then(setHealth);
-    return onExchange(() => setExchangeTick(t => t + 1));
+    const unsubscribe = onExchange(() => setExchangeTick(t => t + 1));
+    return () => {
+      unsubscribe();
+      // Unmounting mid-recording would otherwise leave the microphone open.
+      if (timer.current) clearInterval(timer.current);
+      void recorder.current?.stop();
+      recorder.current = null;
+    };
   }, []);
 
   // A new verdict resets the receipt playground; done in the setter, not an effect.
@@ -257,9 +264,13 @@ export default function TryModelPage() {
                         <dt className="text-muted-foreground">Receipt</dt><dd className="font-mono text-right">{result.receipt ? result.receipt.session_id : "unsigned"}</dd>
                       </dl>
                       {result.timeline && result.timeline.length > 0 && (
-                        <div className="flex items-end gap-1 h-8" aria-label="risk per window">
+                        <div
+                          role="img"
+                          className="flex items-end gap-1 h-8"
+                          aria-label={`Risk per window: ${result.timeline.map(w => `${w.t}s ${w.risk}`).join(", ")}`}
+                        >
                           {result.timeline.map(w => (
-                            <div key={w.t} title={`${w.t}s: risk ${w.risk}`} className={`flex-1 rounded-sm ${w.risk >= 70 ? "bg-red-500/70" : w.risk >= 40 ? "bg-amber-500/70" : "bg-emerald-500/70"}`} style={{ height: `${Math.max(8, w.risk)}%` }} />
+                            <div key={w.t} aria-hidden="true" title={`${w.t}s: risk ${w.risk}`} className={`flex-1 rounded-sm ${w.risk >= 70 ? "bg-red-500/70" : w.risk >= 40 ? "bg-amber-500/70" : "bg-emerald-500/70"}`} style={{ height: `${Math.max(8, w.risk)}%` }} />
                           ))}
                         </div>
                       )}
@@ -344,7 +355,12 @@ export default function TryModelPage() {
                       <Button onClick={async () => {
                         let receipt: RiskReceipt | null = null;
                         try { receipt = JSON.parse(editedReceipt); } catch { receipt = null; }
-                        setAuthorizeOut(await authorizeAction({ receipt, amount: 25000, contact_status: "unknown", first_payee: true }));
+                        try {
+                          setAuthorizeOut(await authorizeAction({ receipt, amount: 25000, contact_status: "unknown", first_payee: true }));
+                        } catch (error) {
+                          setAuthorizeOut(null);
+                          setVerifyOut({ valid: false, reason: `${ERROR_MESSAGE} — ${(error as Error).message}` });
+                        }
                       }}>Attempt ₹25,000 transfer</Button>
                     </div>
                   </div>

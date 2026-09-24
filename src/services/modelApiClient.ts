@@ -2,9 +2,10 @@
  * Client for the Vaani Kavach detection service (AASIST anti-spoofing,
  * model aasist_multigen5, ONNX Runtime on CPU).
  *
- * Requests go to same-origin `/api/vaani/*`, which next.config.ts rewrites to
- * the deployed detector — no CORS, no key in the browser. Point VAANI_API_URL
- * at another deployment to change the target.
+ * Requests go straight to the deployed detector, which sends CORS headers for
+ * any origin: no proxy, no rewrite rule and no key in the browser, so the page
+ * works wherever it is hosted. Set NEXT_PUBLIC_VAANI_API_URL to point at
+ * another deployment (a local uvicorn, say).
  *
  * Nothing here fabricates a verdict: every field comes from the service, and
  * `exchanges` keeps the exact JSON that went over the wire.
@@ -83,10 +84,14 @@ export interface Exchange {
   ms: number;
 }
 
-const BASE = "/api/vaani";
+const BASE = (process.env.NEXT_PUBLIC_VAANI_API_URL ?? "https://vaani-kavach-five.vercel.app").replace(/\/$/, "");
+/** /health sits at the root; everything else is under /api/v1. */
+const url = (path: string) => BASE + (path === "/health" ? path : "/api/v1" + path);
 /** Longest clip sent to the detector, seconds. Same cap as the reference UI. */
 const MAX_SECONDS = 20;
 const SAMPLE_RATE = 16000;
+/** 20 s of 16 kHz mono WAV is 640 KB; the slack covers other formats. */
+const MAX_UPLOAD_BYTES = 4_000_000;
 
 /** Last requests and responses, newest first. Read by the API Exchange tab. */
 export const exchanges: Exchange[] = [];
@@ -109,7 +114,7 @@ async function call<T>(method: "GET" | "POST", path: string, body?: FormData | o
     init.headers = { "content-type": "application/json" };
     shown = body;
   }
-  const res = await fetch(BASE + path, init);
+  const res = await fetch(url(path), init);
   const text = await res.text();
   let data: unknown;
   try { data = JSON.parse(text); } catch { data = { detail: text.slice(0, 300) }; }
@@ -156,10 +161,15 @@ export async function analyzeAudio(audioFile: File | Blob): Promise<InferenceRes
     upload = await toWav16k(audioFile);
     name = name.replace(/\.[^.]+$/, "") + ".wav";
   } catch {
-    // The server decodes WAV/MP3/FLAC/OGG itself; send the original bytes.
+    // The server decodes WAV/MP3/FLAC/OGG itself, so the original bytes are
+    // still worth sending — but nothing has trimmed them to MAX_SECONDS, and
+    // only the byte cap below stands between a long upload and the detector.
+    if (upload.size > MAX_UPLOAD_BYTES) {
+      return { status: "error", error: `This file could not be decoded here and is too large to send as is — trim it to about ${MAX_SECONDS} seconds, or use WAV or MP3.` };
+    }
   }
-  if (upload.size > 4_000_000) {
-    return { status: "error", error: "Clip too large after decoding — keep it under 20 seconds." };
+  if (upload.size > MAX_UPLOAD_BYTES) {
+    return { status: "error", error: `Clip too large — keep it under ${MAX_SECONDS} seconds.` };
   }
   const form = new FormData();
   form.append("audio", upload, name);
@@ -191,14 +201,23 @@ export async function analyzeAudio(audioFile: File | Blob): Promise<InferenceRes
 }
 
 export async function verifyReceipt(receipt: unknown): Promise<{ valid: boolean; reason: string }> {
-  const { data } = await call<{ valid: boolean; reason: string }>("POST", "/receipt/verify", receipt as object);
-  return data;
+  const { status, data } = await call<{ valid?: boolean; reason?: string; detail?: string }>(
+    "POST", "/receipt/verify", receipt as object);
+  if (status !== 200 || typeof data?.valid !== "boolean") {
+    return { valid: false, reason: data?.detail || `verification failed: HTTP ${status}` };
+  }
+  return { valid: data.valid, reason: data.reason ?? "" };
 }
 
 export async function authorizeAction(body: {
   receipt: RiskReceipt | null; amount: number; contact_status: "known" | "unknown"; first_payee: boolean;
 }): Promise<AuthorizeResult> {
-  const { data } = await call<AuthorizeResult>("POST", "/action/authorize", body);
+  const { status, data } = await call<AuthorizeResult & { detail?: string }>("POST", "/action/authorize", body);
+  // A 4xx/5xx body has no decision in it. Rendering it would show an empty
+  // verdict where the page promises one, so fail loudly instead.
+  if (status !== 200 || !data?.decision) {
+    throw new Error(data?.detail || `authorization failed: HTTP ${status}`);
+  }
   return data;
 }
 
@@ -220,6 +239,11 @@ export async function startRecording(opts: { onLevel?: (rms: number) => void; on
   const src = ctx.createMediaStreamSource(stream);
   // ponytail: ScriptProcessorNode is deprecated but universal; AudioWorklet needs a separate module file.
   const node = ctx.createScriptProcessor(4096, 1, 1);
+  // A ScriptProcessor only fires while it is connected to the graph, but
+  // connecting it straight to the speakers plays the microphone back and
+  // howls. Silence the tap instead of removing it.
+  const mute = ctx.createGain();
+  mute.gain.value = 0;
   const chunks: Float32Array[] = [];
   let total = 0, capped = false;
   node.onaudioprocess = e => {
@@ -233,11 +257,11 @@ export async function startRecording(opts: { onLevel?: (rms: number) => void; on
     }
     if (!capped && total >= ctx.sampleRate * MAX_SECONDS) { capped = true; opts.onCap?.(); }
   };
-  src.connect(node); node.connect(ctx.destination);
+  src.connect(node); node.connect(mute); mute.connect(ctx.destination);
   let stopped: Promise<Blob> | null = null;
   return {
     stop: () => stopped ??= (async () => {
-      node.disconnect(); node.onaudioprocess = null;
+      node.disconnect(); mute.disconnect(); node.onaudioprocess = null;
       stream.getTracks().forEach(t => t.stop());
       const rate = ctx.sampleRate;
       await ctx.close();
